@@ -1,0 +1,31 @@
+{
+  "main": "index.mjs",
+  "type": "module",
+  "author": "Giacomo Debidda <giacomo@giacomodebidda.com> (https://giacomodebidda.com/)",
+  "license": "MIT",
+  "keywords": [
+    "nbb"
+  ],
+  "engines": {
+    "node": ">=16"
+  },
+  "dependencies": {
+    "@google-cloud/functions-framework": "^3.1.2",
+    "nbb": "^1.0.136"
+  },
+  "devDependencies": {
+    "jest": "^29.2.0",
+    "prettier": "^2.7.1",
+    "supertest": "^6.3.0"
+  },
+  "overrides": {
+    "supertest": {
+      "superagent": "8.0.0"
+    }
+  },
+  "scripts": {
+    "start:development": "NODE_ENV=development functions-framework --target=hello --port $PORT",
+    "start:production": "NODE_ENV=production functions-framework --target=hello --port $PORT",
+    "test": "NODE_OPTIONS=--experimental-vm-modules npx jest --config config/jest.cjs --rootDir ./"
+  }
+}

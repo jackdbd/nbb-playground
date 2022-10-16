@@ -1,0 +1,97 @@
+#
+# To use an image from Docker Hub, just specify the name of the image, such as
+# ubuntu. To use an image from other registries, specify the full registry path
+# of the image, such as gcr.io/cloud-builders/gcloud.
+#
+# Google Cloud Build official builder images
+# https://github.com/GoogleCloudPlatform/cloud-builders
+#
+steps:
+  - id: '⬇️ Download Babashka'
+    # Note: I could also store the Babashka binary on a Cloud Storage bucket and
+    # download it using gcs-fetcher instead of wget.
+    name: gcr.io/cloud-builders/wget
+    args: ['https://github.com/babashka/babashka/releases/download/v${_BABASHKA_VERSION}/babashka-${_BABASHKA_VERSION}-${_BABASHKA_RELEASE_TYPE}.tar.gz']
+
+  - id: '⚙️ Extract Babashka'
+    name: ubuntu
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        tar -xvf babashka-${_BABASHKA_VERSION}-${_BABASHKA_RELEASE_TYPE}.tar.gz && \
+        rm babashka-${_BABASHKA_VERSION}-${_BABASHKA_RELEASE_TYPE}.tar.gz
+
+  - id: '⚙️ Install Clojars dependencies using Babashka'
+    name: eclipse-temurin:11
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        cp ./bb ${_BABASHKA_INSTALL_DIR} && \
+        bb describe && \
+        java --version && \
+        bb write-deps
+
+  # - id: '👀 List files in /usr/bin/'
+  #   name: ubuntu
+  #   args: ['ls', '-1a', '/usr/bin/']
+
+  # - id: '👀 List files in /workspace/'
+  #   name: ubuntu
+  #   args: ['ls', '-1a', '/workspace/']
+
+  - id: '⚙️ Install Node.js dependencies from package-lock.json'
+    name: node:${_NODE_VERSION}
+    entrypoint: npm
+    args: ['ci']
+
+  - id: '⚙️ Audit Node.js dependencies'
+    # https://docs.npmjs.com/cli/v8/commands/npm-audit#audit-level
+    name: node:${_NODE_VERSION}
+    entrypoint: npm
+    args: ['audit', '--audit-level', 'high']
+
+  # TODO: run tests
+
+  - id: '👀 Gcloud info'
+    name: gcr.io/cloud-builders/gcloud:${_GCLOUD_VERSION}
+    entrypoint: /bin/bash
+    args: ['gcloud', 'info']
+
+  - id: '👀 List files'
+    name: ubuntu
+    args: ['ls', '-1a']
+
+  - id: 'Run npx script'
+    name: node:${_NODE_VERSION}
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        cp ./bb ${_BABASHKA_INSTALL_DIR} && \
+        npx nbb --classpath "$classpath" -e "(require '[honey.sql :as sql]) (sql/format {:select :foo :from :bar :where [:= :baz 2]})"
+
+  - id: 'Run npx script (file)'
+    name: node:${_NODE_VERSION}
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        cp ./bb ${_BABASHKA_INSTALL_DIR} && \
+        npx nbb script.cljs
+
+# user-defined substitutions and default values
+substitutions:
+  _BABASHKA_INSTALL_DIR: /usr/bin/
+  _BABASHKA_VERSION: 0.10.163
+  _BABASHKA_RELEASE_TYPE: linux-amd64-static
+  _GCLOUD_VERSION: latest
+  # M = megabyte, Mi = mebibyte, G = gigabyte, Gi = gibibyte
+  # https://cloud.google.com/functions/docs/configuring/memory
+  # _MEMORY: 256Mi
+  _NODE_VERSION: 16.18.0
+
+options:
+  # https://cloud.google.com/build/docs/configuring-builds/substitute-variable-values#dynamic_substitutions
+  dynamic_substitutions: true

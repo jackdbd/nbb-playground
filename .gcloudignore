@@ -1,0 +1,12 @@
+# https://cloud.google.com/sdk/gcloud/reference/topic/gcloudignore
+
+.gcloudignore
+.git/
+
+# ignore all files/directories specified in .gitignore
+#!include:.gitignore
+
+# explicitly include the .nbb directory, that contains the .nbb cache path
+!.nbb/
+
+.vscode/

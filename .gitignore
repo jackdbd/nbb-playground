@@ -1,0 +1,26 @@
+# Calva (VS Code extension)
+.calva/
+
+# static analyzer and linter for Clojure code
+.clj-kondo/
+
+# classpath cache
+# https://clojure.org/reference/deps_and_cli
+.cpcache/
+
+# environment variables (automatically loaded by direnv)
+.envrc
+
+# Language Server Protocol directory
+.lsp/
+
+# environment variables
+.envrc
+
+# nbb cache path
+.nbb/.cache/
+
+# dependencies
+nbb-deps.jar
+nbb-deps/
+node_modules/

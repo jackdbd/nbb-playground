@@ -1,0 +1,67 @@
+{:tasks
+ {:requires ([babashka.fs :as fs])
+
+  audit
+  {:doc "Audit npm packages"
+   :task (shell "npm audit --audit-level moderate")}
+
+  clean
+  {:doc "Remove dependencies and nbb cache"
+   :task (run '-clean {:parallel true})}
+
+  -clean
+  {:depends [clean:deps clean:nbb-cache]}
+
+  clean:deps
+  {:doc "Remove dependencies (npm packages and jars)"
+   :task (shell "rm -rf nbb-deps nbb-deps.jar node_modules")}
+
+  clean:nbb-cache
+  {:doc "Remove .nbb/ (nbb cache path)"
+   :task (shell "rm -rf .nbb/")}
+
+  demo
+  {:doc "run a simple script"
+   :task (shell "npx nbb script.cljs")}
+
+  deploy
+  {:doc "Deploy to GCP Cloud Functions using gcloud"
+   :enter (println "Execute task:" (:name (current-task)))
+   :depends [format]
+   :task (let [verbosity (or (System/getenv "GCLOUD_VERBOSITY") "info")
+               cmd (str "gcloud builds submit ./ --config cloudbuild.yaml --async --verbosity " verbosity)]
+           (shell cmd))}
+
+  format
+  {:doc "Format JS code with Prettier"
+   :task (shell "npx prettier --config config/prettier.cjs --write ./{__tests__/**/*,src/**/*,index}.{cjs,js,mjs}")}
+
+  install
+  {:doc "Install npm packages (from npm.js) and jars (from Clojars) in parallel."
+   :task (run '-install {:parallel true})}
+
+  -install
+  {:depends [install:npm-packages install:jars]}
+
+  install:jars
+  {:doc "Bundle all Clojars dependencies into a single uberjar, then unzip it to a directory"
+   :task (let [bb-debug (System/getenv "BABASHKA_DEBUG")
+               dest "nbb-deps"
+               cmd (if bb-debug
+                     "bb --debug --config nbb.edn uberjar nbb-deps.jar"
+                     "bb --config nbb.edn uberjar nbb-deps.jar")]
+           (shell cmd)
+           (when (not (fs/exists? dest))
+             (println "Create directory" dest)
+             (fs/create-dirs dest))
+           (println "Unzip" "nbb-deps.jar" "to" dest)
+           (fs/unzip "nbb-deps.jar" dest {:replace-existing true}))}
+
+  install:npm-packages
+  {:doc "Install npm packages from npm.js."
+   :task (shell "npm install")}
+
+  nuke
+  {:doc "Remove package-lock.json"
+   :depends [clean]
+   :task (shell "rm -rf package-lock.json")}}}
